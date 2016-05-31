@@ -1,1 +1,1 @@
-include ':app'
+include ':app', ':chatter-bot-api-1.4.2'

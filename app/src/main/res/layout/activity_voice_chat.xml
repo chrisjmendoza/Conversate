@@ -27,10 +27,10 @@
         android:id="@+id/voiceButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|center"
+        android:layout_gravity="bottom|left"
         android:layout_margin="@dimen/fab_margin"
         android:src="@drawable/abc_ic_voice_search_api_mtrl_alpha"
         android:baselineAlignBottom="false"
-        android:contentDescription="Voice talk button" />
+        android:contentDescription="Voice talk button"/>
 
 </android.support.design.widget.CoordinatorLayout>
