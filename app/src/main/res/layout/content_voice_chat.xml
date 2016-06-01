@@ -12,28 +12,13 @@
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
     tools:context="androidprojects.ad340.conversate.VoiceChatActivity"
     tools:showIn="@layout/activity_voice_chat">
-    <!--
-    <EditText
-        android:id="@+id/input"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:hint="Type your input here!"
-        android:layout_centerHorizontal="true"/>
-    -->
 
     <Button
         android:id="@+id/type_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
         android:text="Type"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentRight="true"/>
-
-    <TextView
-        android:id="@+id/output"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Chatterbot output"
-        android:layout_centerHorizontal="true"/>
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginTop="50dp"/>
 </RelativeLayout>
