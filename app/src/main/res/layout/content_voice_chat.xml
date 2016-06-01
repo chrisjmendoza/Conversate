@@ -9,6 +9,7 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
+    android:background="#FF404040"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
     tools:context="androidprojects.ad340.conversate.VoiceChatActivity"
     tools:showIn="@layout/activity_voice_chat">
@@ -16,9 +17,12 @@
     <Button
         android:id="@+id/type_button"
         android:text="Type"
+        android:textColor="#ffffff"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_alignParentRight="true"
-        android:layout_marginTop="50dp"/>
+        android:layout_marginTop="25dp"
+        android:background="#3e5bd2"
+        android:backgroundTintMode="src_atop" />
 </RelativeLayout>

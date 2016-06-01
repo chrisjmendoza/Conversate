@@ -50,6 +50,10 @@ public class VoiceChatActivity extends AppCompatActivity {
     private String currentResponse;
     private boolean isTryingToGetResponse;
 
+    // Chat Labels
+    private static final String BOT_LABEL = "Cleverbot";
+    private static final String USER_LABEL = "Me";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
@@ -158,6 +162,8 @@ public class VoiceChatActivity extends AppCompatActivity {
         textMessage.setLayoutParams(params);
         textMessage.setHint("Type text here!");
         textMessage.requestFocus();
+        textMessage.setHintTextColor(getResources().getColor(R.color.text));
+        textMessage.setTextColor(getResources().getColor(R.color.text));
 
         // bring up keyboard
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -181,7 +187,16 @@ public class VoiceChatActivity extends AppCompatActivity {
         sentMessage.setId(thisSentMessageId);
         params = getTextViewParams(typeButton.getId(), isChatterBot, false);
         sentMessage.setLayoutParams(params);
-        sentMessage.setText(message);
+        sentMessage.setTextColor(getResources().getColor(R.color.text));
+        sentMessage.setBackgroundColor(getResources().getColor(R.color.messageBackground));
+        sentMessage.setPadding(10, 10, 10, 10);
+
+        // set the correct message label
+        if (isChatterBot) {
+            sentMessage.setText(BOT_LABEL + ":    " + message);
+        } else {
+            sentMessage.setText(USER_LABEL + ":    " + message);
+        }
         sentMessages.add(sentMessage);
 
         // place previous message (above current message)
