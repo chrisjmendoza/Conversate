@@ -12,6 +12,7 @@ import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.animation.AnimationUtils;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
@@ -96,17 +97,20 @@ public class VoiceChatActivity extends AppCompatActivity {
                     typeButton.setText("Send");
 
                 } else if (buttonText.equals("Send")) {
-                    String message = textMessage.getText().toString();
-
-                    // give the string from EditText to the new TextView
-                    layout.addView(createNewTextView(message, false));
-                    recordButton.setVisibility(View.VISIBLE);
-                    typeButton.setText("Type");
-
                     // get rid of that damn keyboard
                     InputMethodManager imm = (InputMethodManager)
                             getSystemService(Context.INPUT_METHOD_SERVICE);
                     imm.hideSoftInputFromWindow(textMessage.getWindowToken(), 0);
+
+                    String message = textMessage.getText().toString();
+
+                    // give the string from EditText to the new TextView
+                    final TextView userMessage = createNewTextView(message, false);
+                    layout.addView(userMessage);
+                    userMessage.startAnimation(AnimationUtils.loadAnimation(VoiceChatActivity.this, android.R.anim.slide_in_left));
+
+                    recordButton.setVisibility(View.VISIBLE);
+                    typeButton.setText("Type");
 
                     // remove the edit view when the user sends a message
                     layout.removeView(textMessage);
@@ -120,18 +124,17 @@ public class VoiceChatActivity extends AppCompatActivity {
 
                     // wait until we get a response back from cleverbot
                     while (currentResponse == null) {
-                        try {
-                            Thread.sleep(500);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
+                        //do nothing
                     }
-                    layout.addView(createNewTextView(currentResponse, true));
+
+                    final TextView responseMessage = createNewTextView(currentResponse, true);
+                    layout.addView(responseMessage);
+                    responseMessage.startAnimation(AnimationUtils.loadAnimation(VoiceChatActivity.this, android.R.anim.slide_in_left));
 
                     // print for debugging the current messages and responses
                     System.out.println("Current message: " + currentMessage +
                             ", and current response:" + currentResponse);
-                    
+
                     // now that we have our responses, we have to close the AsyncTask
                     isTryingToGetResponse = false;
                     currentResponse = null;
@@ -254,28 +257,24 @@ public class VoiceChatActivity extends AppCompatActivity {
 
     class CreateChatSessionTask extends AsyncTask<String, Void, Void> {
 
-        private Exception exception;
-
-        protected void onPostExecute() {
-            // TODO: check this.exception
-            // TODO: do something with the app
-        }
-
         @Override
         protected Void doInBackground(String... params) {
             while (conversateSession == null) {
                 try {
-                    System.out.println("Trying to start session");
+                    System.out.println("Trying to start session. Silence means success.");
                     conversateSession = conversateBot.createSession();
                 } catch (Exception e) {
-                    this.exception = e;
+                    e.printStackTrace();
                     System.out.println("Failed to start session");
                 }
-                try {
-                    Thread.sleep(1000);
-                    System.out.println("trying again!! Are we online?" + isOnline());
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                if (conversateSession == null) {
+                    try {
+                        Thread.sleep(1000);
+                        System.out.println("trying to start session again!! Are we online? "
+                                + isOnline());
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
             return null;
@@ -290,23 +289,18 @@ public class VoiceChatActivity extends AppCompatActivity {
 
     class ChatResponseTask extends AsyncTask<String, Void, Void> {
 
-        private Exception exception;
-
         @Override
         protected Void doInBackground(String... params) {
             while (currentResponse == null && isTryingToGetResponse) {
                 try {
-                    System.out.println("Trying to get response");
+                    System.out.println("Trying to get response. Silence means success.");
                     currentResponse = conversateSession.think(currentMessage);
                 } catch (Exception e) {
-                    this.exception = e;
+                    e.printStackTrace();
                     System.out.println("Failed to get response");
                 }
-                try {
-                    Thread.sleep(1000);
-                    System.out.println("trying for response again!");
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                if (currentResponse == null) {
+                    System.out.println("Trying for response again..");
                 }
             }
             return null;
