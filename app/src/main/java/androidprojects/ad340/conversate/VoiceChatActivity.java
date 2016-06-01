@@ -38,13 +38,13 @@ public class VoiceChatActivity extends AppCompatActivity {
     // EditText reference for composing message
     private EditText textMessage;
 
-    // TextView reference for sent message
+    // TextView references for sent messages
     private List<TextView> sentMessages;
-    private int nextSentMessageId;
+    private int thisSentMessageId;
 
-    // Chatterbot gets stored here
-    ChatterBot conversate_bot;
-    ChatterBotSession conversate_session;
+    // ChatterBot gets stored here
+    ChatterBot conversateBot;
+    ChatterBotSession conversateSession;
     private String currentMessage;
     private String currentResponse;
     private boolean isTryingToGetResponse;
@@ -60,9 +60,9 @@ public class VoiceChatActivity extends AppCompatActivity {
 
         // instantiate the sent messages list
         sentMessages = new ArrayList<TextView>();
-        nextSentMessageId = 1;
+        thisSentMessageId = 0;
 
-        //instantiate Chatterbot
+        // instantiate ChatterBot
         createChatterSession();
 
         // handle the buttons
@@ -79,7 +79,10 @@ public class VoiceChatActivity extends AppCompatActivity {
         typeButton.setOnClickListener(onTypeClick());
     }
 
-    // This onclick listener method is triggered when the type/send button is clicked
+    /**
+     * This onClickListener method is triggered when the Type/Send button is clicked
+     * @return OnClickListener
+     */
     private View.OnClickListener onTypeClick() {
         return new View.OnClickListener() {
             @Override
@@ -138,54 +141,80 @@ public class VoiceChatActivity extends AppCompatActivity {
         };
     }
 
-    // Creates a new EditText when you click "type" to compose a message 
-    // Should also set focus to EditText and bring up keyboard
+    /**
+     * Creates new EditText when you click "Type" to compose a message
+     * Sets focus to EditText and brings up keyboard
+     * @return EditText
+     */
     private EditText createNewEditText() {
-        final RelativeLayout.LayoutParams params =
-                new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT,
-                        RelativeLayout.LayoutParams.WRAP_CONTENT);
+        final RelativeLayout.LayoutParams params;
 
-        // add xml layout rules to this new EditText
-        params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
-        params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
-
+        // create new EditText
         textMessage = new EditText(this);
+        params = getTextViewParams(0, false, true);
         textMessage.setLayoutParams(params);
         textMessage.setHint("Type text here!");
-
         textMessage.requestFocus();
+
+        // bring up keyboard
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, InputMethodManager.HIDE_IMPLICIT_ONLY);
+
         return textMessage;
     }
 
-    // Creates a new TextView when you click "send" to send a message 
-    // Should also set focus to EditText and bring up keyboard
-    private TextView createNewTextView(String message, boolean isChatterbot) {
-        final RelativeLayout.LayoutParams params =
-                new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.WRAP_CONTENT,
-                        RelativeLayout.LayoutParams.WRAP_CONTENT);
+    /**
+     * Creates new TextView when you click "Send" to send a message
+     * @param message to place in TextView
+     * @param isChatterBot determines left or right alignment
+     * @return message TextView
+     */
+    private TextView createNewTextView(String message, boolean isChatterBot) {
+        final RelativeLayout.LayoutParams params, oldMessageParams;
+
+        // place current message
+        thisSentMessageId++;
+        TextView sentMessage = new TextView(this);
+        sentMessage.setId(thisSentMessageId);
+        params = getTextViewParams(typeButton.getId(), isChatterBot, false);
+        sentMessage.setLayoutParams(params);
+        sentMessage.setText(message);
+        sentMessages.add(sentMessage);
+
+        // place previous message (above current message)
+        if (sentMessages.size() > 1) {
+            TextView oldMessage = sentMessages.get(sentMessages.size() - 2);
+            oldMessageParams = getTextViewParams(thisSentMessageId, !isChatterBot, false);
+            oldMessage.setLayoutParams(oldMessageParams);
+        }
+
+        return sentMessage;
+    }
+
+    /**
+     * Helper function for createNewTextView
+     * @param id to place old message above
+     * @param isChatterBot determines left or right alignment
+     * @return LayoutParams to attach to a TextView
+     */
+    private RelativeLayout.LayoutParams getTextViewParams(int id, boolean isChatterBot, boolean isEditText) {
+        final RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(
+                RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
 
         // add xml layout rules to this new EditText
-        if (isChatterbot) {
+        if (isChatterBot || isEditText) {
             params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
         } else {
             params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, RelativeLayout.TRUE);
         }
 
-        if (sentMessages.isEmpty()) {
-            params.addRule(RelativeLayout.ABOVE, typeButton.getId());
+        if (isEditText) {
+            params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
         } else {
-            params.addRule(RelativeLayout.ABOVE, sentMessages.get(sentMessages.size() - 1).getId());
+            params.addRule(RelativeLayout.ABOVE, id);
         }
 
-        TextView sentMessage = new TextView(this);
-        sentMessage.setId(nextSentMessageId);
-        nextSentMessageId++;
-        sentMessage.setLayoutParams(params);
-        sentMessage.setText(message);
-        sentMessages.add(sentMessage);
-        return sentMessage;
+        return params;
     }
 
     @Override
@@ -214,7 +243,7 @@ public class VoiceChatActivity extends AppCompatActivity {
         ChatterBotFactory factory = new ChatterBotFactory();
 
         try {
-            conversate_bot = factory.create(ChatterBotType.CLEVERBOT);
+            conversateBot = factory.create(ChatterBotType.CLEVERBOT);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -234,10 +263,10 @@ public class VoiceChatActivity extends AppCompatActivity {
 
         @Override
         protected Void doInBackground(String... params) {
-            while (conversate_session == null) {
+            while (conversateSession == null) {
                 try {
                     System.out.println("Trying to start session");
-                    conversate_session = conversate_bot.createSession();
+                    conversateSession = conversateBot.createSession();
                 } catch (Exception e) {
                     this.exception = e;
                     System.out.println("Failed to start session");
@@ -268,7 +297,7 @@ public class VoiceChatActivity extends AppCompatActivity {
             while (currentResponse == null && isTryingToGetResponse) {
                 try {
                     System.out.println("Trying to get response");
-                    currentResponse = conversate_session.think(currentMessage);
+                    currentResponse = conversateSession.think(currentMessage);
                 } catch (Exception e) {
                     this.exception = e;
                     System.out.println("Failed to get response");
