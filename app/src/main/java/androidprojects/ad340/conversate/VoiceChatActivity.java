@@ -9,6 +9,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.view.Gravity;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -16,7 +17,9 @@ import android.view.animation.AnimationUtils;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.google.code.chatterbotapi.ChatterBot;
@@ -30,7 +33,7 @@ import java.util.List;
 public class VoiceChatActivity extends AppCompatActivity {
 
     // layout reference
-    private RelativeLayout layout;
+    private LinearLayout layout;
 
     // button references
     private FloatingActionButton recordButton;
@@ -41,7 +44,6 @@ public class VoiceChatActivity extends AppCompatActivity {
 
     // TextView references for sent messages
     private List<TextView> sentMessages;
-    private int thisSentMessageId;
 
     // ChatterBot gets stored here
     ChatterBot conversateBot;
@@ -59,13 +61,13 @@ public class VoiceChatActivity extends AppCompatActivity {
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_voice_chat);
-        layout = (RelativeLayout) findViewById(R.id.chat_layout);
+        createScrollView();
+
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
         // instantiate the sent messages list
         sentMessages = new ArrayList<TextView>();
-        thisSentMessageId = 0;
 
         // instantiate ChatterBot
         createChatterSession();
@@ -154,11 +156,11 @@ public class VoiceChatActivity extends AppCompatActivity {
      * @return EditText
      */
     private EditText createNewEditText() {
-        final RelativeLayout.LayoutParams params;
+        final LinearLayout.LayoutParams params;
 
         // create new EditText
         textMessage = new EditText(this);
-        params = getTextViewParams(0, false, true);
+        params = getTextViewParams(false, true);
         textMessage.setLayoutParams(params);
         textMessage.setHint("Type text here!");
         textMessage.requestFocus();
@@ -179,13 +181,11 @@ public class VoiceChatActivity extends AppCompatActivity {
      * @return message TextView
      */
     private TextView createNewTextView(String message, boolean isChatterBot) {
-        final RelativeLayout.LayoutParams params, oldMessageParams;
+        final LinearLayout.LayoutParams params;
 
         // place current message
-        thisSentMessageId++;
         TextView sentMessage = new TextView(this);
-        sentMessage.setId(thisSentMessageId);
-        params = getTextViewParams(typeButton.getId(), isChatterBot, false);
+        params = getTextViewParams(isChatterBot, false);
         sentMessage.setLayoutParams(params);
         sentMessage.setTextColor(getResources().getColor(R.color.text));
         sentMessage.setBackgroundColor(getResources().getColor(R.color.messageBackground));
@@ -199,39 +199,29 @@ public class VoiceChatActivity extends AppCompatActivity {
         }
         sentMessages.add(sentMessage);
 
-        // place previous message (above current message)
-        if (sentMessages.size() > 1) {
-            TextView oldMessage = sentMessages.get(sentMessages.size() - 2);
-            oldMessageParams = getTextViewParams(thisSentMessageId, !isChatterBot, false);
-            oldMessage.setLayoutParams(oldMessageParams);
-        }
-
         return sentMessage;
     }
 
     /**
      * Helper function for createNewTextView
-     * @param id to place old message above
      * @param isChatterBot determines left or right alignment
      * @return LayoutParams to attach to a TextView
      */
-    private RelativeLayout.LayoutParams getTextViewParams(int id, boolean isChatterBot, boolean isEditText) {
-        final RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(
-                RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
+    private LinearLayout.LayoutParams getTextViewParams(boolean isChatterBot, boolean isEditText) {
+        final LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
 
         // add xml layout rules to this new EditText
         if (isChatterBot || isEditText) {
-            params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
+            params.gravity = Gravity.LEFT;
         } else {
-            params.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, RelativeLayout.TRUE);
+            params.gravity = Gravity.RIGHT;
         }
 
         if (isEditText) {
-            params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
-        } else {
-            params.addRule(RelativeLayout.ABOVE, id);
+            params.width = layout.getWidth() - typeButton.getWidth() - 10;
+            params.gravity = Gravity.BOTTOM;
         }
-
         return params;
     }
 
@@ -268,6 +258,19 @@ public class VoiceChatActivity extends AppCompatActivity {
 
         CreateChatSessionTask createSessionTask = new CreateChatSessionTask();
         createSessionTask.execute();
+    }
+
+    private void createScrollView() {
+        RelativeLayout rl = (RelativeLayout) findViewById(R.id.chat_layout);
+        ScrollView sv = new ScrollView(this);
+        sv.setLayoutParams(new ScrollView.LayoutParams(ScrollView.LayoutParams.MATCH_PARENT,
+                ScrollView.LayoutParams.MATCH_PARENT));
+        layout = new LinearLayout(this);
+        layout.setLayoutParams(new ScrollView.LayoutParams(ScrollView.LayoutParams.MATCH_PARENT,
+                ScrollView.LayoutParams.MATCH_PARENT));
+        layout.setOrientation(LinearLayout.VERTICAL);
+        sv.addView(layout);
+        rl.addView(sv);
     }
 
     class CreateChatSessionTask extends AsyncTask<String, Void, Void> {
