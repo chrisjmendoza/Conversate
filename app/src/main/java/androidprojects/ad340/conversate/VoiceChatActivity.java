@@ -1,12 +1,16 @@
 package androidprojects.ad340.conversate;
 
+import android.content.ActivityNotFoundException;
 import android.content.Context;
+import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.speech.RecognizerIntent;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Gravity;
@@ -21,6 +25,7 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.code.chatterbotapi.ChatterBot;
 import com.google.code.chatterbotapi.ChatterBotFactory;
@@ -45,6 +50,9 @@ public class VoiceChatActivity extends AppCompatActivity {
     // TextView references for sent messages
     private List<TextView> sentMessages;
 
+    protected static final int SPEECH = 1;
+    private TextView txt;
+
     // ChatterBot gets stored here
     ChatterBot conversateBot;
     ChatterBotSession conversateSession;
@@ -67,7 +75,7 @@ public class VoiceChatActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
 
         // instantiate the sent messages list
-        sentMessages = new ArrayList<TextView>();
+        sentMessages = new ArrayList<>();
 
         // instantiate ChatterBot
         createChatterSession();
@@ -77,14 +85,73 @@ public class VoiceChatActivity extends AppCompatActivity {
         recordButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Should record voice for Conversate", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+                Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+
+                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, "en-us");
+
+                try{
+                    startActivityForResult(intent, SPEECH);
+
+                    //txt.setText("");
+
+                } catch(ActivityNotFoundException e) {
+
+                    Toast t = Toast.makeText(getApplicationContext(), "Your Device does not support Speech to Text", Toast.LENGTH_SHORT);
+
+                    t.show();
+                }
             }
+
         });
 
         typeButton = (Button) findViewById(R.id.type_button);
         typeButton.setOnClickListener(onTypeClick());
     }
+
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if(requestCode == SPEECH) {
+                if(resultCode == RESULT_OK && null != data) {
+
+                    ArrayList<String> text = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+
+//                    txt.setText(text.get(0));
+
+                    String message = text.get(0);
+
+                    // give the string from EditText to the new TextView
+                    final TextView userMessage = createNewTextView(message, false);
+                    layout.addView(userMessage);
+                    userMessage.startAnimation(AnimationUtils.loadAnimation(VoiceChatActivity.this, android.R.anim.slide_in_left));
+
+                    // this is all because getting a response makes a web request
+                    // and web requests can't happen on the UI thread
+                    currentMessage = message;
+                    isTryingToGetResponse = true;
+                    ChatResponseTask getResponseTask = new ChatResponseTask();
+                    getResponseTask.execute();
+
+                    // wait until we get a response back from cleverbot
+                    while (currentResponse == null) {
+                        //do nothing
+                    }
+
+                    final TextView responseMessage = createNewTextView(currentResponse, true);
+                    layout.addView(responseMessage);
+                    responseMessage.startAnimation(AnimationUtils.loadAnimation(VoiceChatActivity.this, android.R.anim.slide_in_left));
+
+                    // print for debugging the current messages and responses
+                    System.out.println("Current message: " + currentMessage +
+                            ", and current response:" + currentResponse);
+
+                    // now that we have our responses, we have to close the AsyncTask
+                    isTryingToGetResponse = false;
+                    currentResponse = null;
+                    currentMessage = null;
+                }
+            }
+        }
 
     /**
      * This onClickListener method is triggered when the Type/Send button is clicked
@@ -164,8 +231,8 @@ public class VoiceChatActivity extends AppCompatActivity {
         textMessage.setLayoutParams(params);
         textMessage.setHint("Type text here!");
         textMessage.requestFocus();
-        textMessage.setHintTextColor(getResources().getColor(R.color.text));
-        textMessage.setTextColor(getResources().getColor(R.color.text));
+        textMessage.setHintTextColor(ContextCompat.getColor(this, R.color.text));
+        textMessage.setTextColor(ContextCompat.getColor(this, R.color.text));
 
         // bring up keyboard
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -229,6 +296,7 @@ public class VoiceChatActivity extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_voice_chat, menu);
+//        getMenuInflater().inflate(R.menu.main, menu);
         return true;
     }
 
