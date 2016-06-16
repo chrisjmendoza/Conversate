@@ -143,7 +143,7 @@ public class VoiceChatActivity extends AppCompatActivity {
 
                     // print for debugging the current messages and responses
                     System.out.println("Current message: " + currentMessage +
-                            ", and current response:" + currentResponse);
+                            ", and current response: " + currentResponse);
 
                     // now that we have our responses, we have to close the AsyncTask
                     isTryingToGetResponse = false;
