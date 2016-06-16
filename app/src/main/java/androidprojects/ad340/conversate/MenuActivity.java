@@ -9,6 +9,7 @@ import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 public class MenuActivity extends AppCompatActivity {
@@ -19,16 +20,20 @@ public class MenuActivity extends AppCompatActivity {
         setContentView(R.layout.activity_menu);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        getSupportActionBar().setTitle("Conversate");
 
-        FloatingActionButton startButton = (FloatingActionButton) findViewById(R.id.start);
+        Button startButton = (Button) findViewById(R.id.start);
         startButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
 
                 try{
                     startActivity(new Intent(MenuActivity.this, VoiceChatActivity.class));
+
                 } catch(ActivityNotFoundException e) {
-                    Toast t = Toast.makeText(getApplicationContext(), "Your Device does not support Speech to Text", Toast.LENGTH_SHORT);
+                    Toast t = Toast.makeText(getApplicationContext(),
+                            "Your device couldn't connect to Conversate",
+                            Toast.LENGTH_SHORT);
 
                     t.show();
                 }
