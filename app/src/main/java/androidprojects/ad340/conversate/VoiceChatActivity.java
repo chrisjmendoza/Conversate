@@ -8,8 +8,8 @@ import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.speech.RecognizerIntent;
+import android.speech.tts.TextToSpeech;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -34,8 +34,9 @@ import com.google.code.chatterbotapi.ChatterBotType;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
-public class VoiceChatActivity extends AppCompatActivity {
+public class VoiceChatActivity extends AppCompatActivity implements TextToSpeech.OnInitListener {
 
     // layout reference
     private LinearLayout layout;
@@ -47,18 +48,20 @@ public class VoiceChatActivity extends AppCompatActivity {
     // EditText reference for composing message
     private EditText textMessage;
 
-    // TextView references for sent messages
+    // TextView references for all sent messages
     private List<TextView> sentMessages;
 
-    protected static final int SPEECH = 1;
-    private TextView txt;
-
-    // ChatterBot gets stored here
+    // ChatterBot variables get stored here
     ChatterBot conversateBot;
     ChatterBotSession conversateSession;
     private String currentMessage;
     private String currentResponse;
     private boolean isTryingToGetResponse;
+
+    // Text to Speech and Speech to Text
+    private int MY_TTS_DATA_CHECK_CODE = 42;
+    private int REQ_CODE_SPEECH_INPUT = 43;
+    private TextToSpeech conversateTTS;
 
     // Chat Labels
     private static final String BOT_LABEL = "Cleverbot";
@@ -80,26 +83,17 @@ public class VoiceChatActivity extends AppCompatActivity {
         // instantiate ChatterBot
         createChatterSession();
 
+        // instantiate text to speech
+        Intent checkTTSIntent = new Intent();
+        checkTTSIntent.setAction(TextToSpeech.Engine.ACTION_CHECK_TTS_DATA);
+        startActivityForResult(checkTTSIntent, MY_TTS_DATA_CHECK_CODE);
+
         // handle the buttons
         recordButton = (FloatingActionButton) findViewById(R.id.voiceButton);
         recordButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-
-                intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, "en-us");
-
-                try{
-                    startActivityForResult(intent, SPEECH);
-
-                    //txt.setText("");
-
-                } catch(ActivityNotFoundException e) {
-
-                    Toast t = Toast.makeText(getApplicationContext(), "Your Device does not support Speech to Text", Toast.LENGTH_SHORT);
-
-                    t.show();
-                }
+                promptSpeechInput();
             }
 
         });
@@ -108,50 +102,98 @@ public class VoiceChatActivity extends AppCompatActivity {
         typeButton.setOnClickListener(onTypeClick());
     }
 
+    /**
+     * Install Text to Speech data when the application initializes
+     * */
+    public void onInit(int initStatus) {
+        // if text to speech initiallized successfully and English is available on device
+        if (initStatus == TextToSpeech.SUCCESS &&
+                conversateTTS.isLanguageAvailable(Locale.US) == TextToSpeech.LANG_AVAILABLE) {
+            conversateTTS.setLanguage(Locale.US);
+
+        } else if (initStatus == TextToSpeech.ERROR) {
+            Toast.makeText(this, "Your Device does not support Text to Speech",
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+
+    /**
+     * Show google speech input dialog, handler for the record button
+     * */
+    private void promptSpeechInput() {
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, "en-US");
+        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Talk!");
+
+        try {
+            startActivityForResult(intent, REQ_CODE_SPEECH_INPUT);
+        } catch (ActivityNotFoundException a) {
+            Toast.makeText(getApplicationContext(),
+                    "Speech to Text is not supported on your device!",
+                    Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /**
+     * Handles the activity results for Speech to Text and Text to Speech
+     * */
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        if(requestCode == SPEECH) {
-                if(resultCode == RESULT_OK && null != data) {
-
-                    ArrayList<String> text = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
-
-//                    txt.setText(text.get(0));
-
-                    String message = text.get(0);
-
-                    // give the string from EditText to the new TextView
-                    final TextView userMessage = createNewTextView(message, false);
-                    layout.addView(userMessage);
-                    userMessage.startAnimation(AnimationUtils.loadAnimation(VoiceChatActivity.this, android.R.anim.slide_in_left));
-
-                    // this is all because getting a response makes a web request
-                    // and web requests can't happen on the UI thread
-                    currentMessage = message;
-                    isTryingToGetResponse = true;
-                    ChatResponseTask getResponseTask = new ChatResponseTask();
-                    getResponseTask.execute();
-
-                    // wait until we get a response back from cleverbot
-                    while (currentResponse == null) {
-                        //do nothing
-                    }
-
-                    final TextView responseMessage = createNewTextView(currentResponse, true);
-                    layout.addView(responseMessage);
-                    responseMessage.startAnimation(AnimationUtils.loadAnimation(VoiceChatActivity.this, android.R.anim.slide_in_left));
-
-                    // print for debugging the current messages and responses
-                    System.out.println("Current message: " + currentMessage +
-                            ", and current response: " + currentResponse);
-
-                    // now that we have our responses, we have to close the AsyncTask
-                    isTryingToGetResponse = false;
-                    currentResponse = null;
-                    currentMessage = null;
-                }
+        if (requestCode == MY_TTS_DATA_CHECK_CODE) {
+            if (resultCode == TextToSpeech.Engine.CHECK_VOICE_DATA_PASS) {
+                //the device has the necessary data - create the TTS
+                conversateTTS = new TextToSpeech(this, this);
             }
+            else {
+                //no data - install it now
+                Intent installTTSIntent = new Intent();
+                installTTSIntent.setAction(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA);
+                startActivity(installTTSIntent);
+            }
+        } else
+        if (requestCode == REQ_CODE_SPEECH_INPUT && resultCode == RESULT_OK && data != null) {
+
+            ArrayList<String> text = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+            String message = text.get(0);
+
+            // FACTOR AFTER give the string from EditText to the new TextView
+            final TextView userMessage = createNewTextView(message, false);
+            layout.addView(userMessage);
+            userMessage.startAnimation(AnimationUtils.loadAnimation(VoiceChatActivity.this,
+                    android.R.anim.slide_in_left));
+
+            // update global variable because getting a response makes a web request
+            // and web requests can't happen on the UI thread
+            currentMessage = message;
+            isTryingToGetResponse = true;
+            ChatResponseTask getResponseTask = new ChatResponseTask();
+            getResponseTask.execute();
+
+            // wait until we get a response back from cleverbot
+            while (currentResponse == null) {
+                //do nothing
+            }
+
+            final TextView responseMessage = createNewTextView(currentResponse, true);
+            layout.addView(responseMessage);
+            responseMessage.startAnimation(AnimationUtils.loadAnimation(VoiceChatActivity.this,
+                    android.R.anim.slide_in_left));
+
+            // print for debugging the current messages and responses
+            System.out.println("Current message: " + currentMessage +
+                    ", and current response: " + currentResponse);
+
+            if (conversateTTS != null) {
+                conversateTTS.speak(currentResponse, TextToSpeech.QUEUE_ADD, null);
+            }
+
+            // now that we have our responses, we have to close the AsyncTask
+            isTryingToGetResponse = false;
+            currentResponse = null;
+            currentMessage = null;
         }
+    }
 
     /**
      * This onClickListener method is triggered when the Type/Send button is clicked
@@ -177,7 +219,7 @@ public class VoiceChatActivity extends AppCompatActivity {
 
                     String message = textMessage.getText().toString();
 
-                    // give the string from EditText to the new TextView
+                    // FACTOR AFTER give the string from EditText to the new TextView
                     final TextView userMessage = createNewTextView(message, false);
                     layout.addView(userMessage);
                     userMessage.startAnimation(AnimationUtils.loadAnimation(VoiceChatActivity.this, android.R.anim.slide_in_left));
@@ -207,6 +249,10 @@ public class VoiceChatActivity extends AppCompatActivity {
                     // print for debugging the current messages and responses
                     System.out.println("Current message: " + currentMessage +
                             ", and current response:" + currentResponse);
+
+                    if (conversateTTS != null) {
+                        conversateTTS.speak(currentResponse, TextToSpeech.QUEUE_ADD, null);
+                    }
 
                     // now that we have our responses, we have to close the AsyncTask
                     isTryingToGetResponse = false;
@@ -296,7 +342,6 @@ public class VoiceChatActivity extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_voice_chat, menu);
-//        getMenuInflater().inflate(R.menu.main, menu);
         return true;
     }
 
@@ -315,6 +360,9 @@ public class VoiceChatActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    /**
+     * Creates a new chatter session using the API and stores it
+     * */
     private void createChatterSession() {
         ChatterBotFactory factory = new ChatterBotFactory();
 
@@ -328,6 +376,10 @@ public class VoiceChatActivity extends AppCompatActivity {
         createSessionTask.execute();
     }
 
+    /**
+     * Programmatically creates a scrollview for the messages to populate,
+     * and adds it to the existing RelativeLayout from "content_voice_chat.xml"
+     * */
     private void createScrollView() {
         RelativeLayout rl = (RelativeLayout) findViewById(R.id.chat_layout);
         ScrollView sv = new ScrollView(this);
@@ -341,6 +393,10 @@ public class VoiceChatActivity extends AppCompatActivity {
         rl.addView(sv);
     }
 
+    /**
+     * Create Chat Session AsyncTask in order to use multiple threads,
+     * for the purpose of not making HTTP requests on the UI thread.
+     * */
     class CreateChatSessionTask extends AsyncTask<String, Void, Void> {
 
         @Override
@@ -373,6 +429,10 @@ public class VoiceChatActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Get Chat Response AsyncTask in order to use multiple threads,
+     * for the purpose of not making HTTP requests on the UI thread.
+     * */
     class ChatResponseTask extends AsyncTask<String, Void, Void> {
 
         @Override
