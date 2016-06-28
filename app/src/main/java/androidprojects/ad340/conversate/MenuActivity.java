@@ -10,6 +10,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 public class MenuActivity extends AppCompatActivity {
@@ -19,18 +20,22 @@ public class MenuActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_menu);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        toolbar.setTitle("");
         setSupportActionBar(toolbar);
-        getSupportActionBar().setTitle("Conversate");
+        TextView title = (TextView) findViewById(R.id.title);
+        title.setText("Conversate");
 
         Button startButton = (Button) findViewById(R.id.start);
         startButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
 
-                try{
-                    startActivity(new Intent(MenuActivity.this, VoiceChatActivity.class));
+                try {
+                    Intent startChatActivity = new Intent(MenuActivity.this,
+                            VoiceChatActivity.class);
+                    startActivity(startChatActivity);
 
-                } catch(ActivityNotFoundException e) {
+                } catch (ActivityNotFoundException e) {
                     Toast t = Toast.makeText(getApplicationContext(),
                             "Your device couldn't connect to Conversate",
                             Toast.LENGTH_SHORT);

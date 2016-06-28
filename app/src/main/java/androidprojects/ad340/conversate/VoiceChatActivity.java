@@ -75,7 +75,10 @@ public class VoiceChatActivity extends AppCompatActivity implements TextToSpeech
         createScrollView();
 
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        toolbar.setTitle("");
         setSupportActionBar(toolbar);
+        TextView title = (TextView) findViewById(R.id.title);
+        title.setText("Talking to Cleverbot");
 
         // instantiate the sent messages list
         sentMessages = new ArrayList<>();
@@ -122,7 +125,9 @@ public class VoiceChatActivity extends AppCompatActivity implements TextToSpeech
      * */
     private void promptSpeechInput() {
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, "en-US");
+        intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Talk!");
 
         try {
@@ -358,6 +363,12 @@ public class VoiceChatActivity extends AppCompatActivity implements TextToSpeech
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        conversateTTS.shutdown();
     }
 
     /**

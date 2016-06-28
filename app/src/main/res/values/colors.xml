@@ -5,4 +5,6 @@
     <color name="colorAccent">#FF4081</color>
     <color name="text">#FFFFFF</color>
     <color name="messageBackground">#2e2e2e</color>
+    <color name="bg_gradient_start">#31244e</color>
+    <color name="bg_gradient_end">#6b394c</color>
 </resources>
